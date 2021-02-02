@@ -10,8 +10,8 @@ const port = 8080;
 
 //System params
 
-const led_state_on = false;
-const led_on_time = new Date().getTime();
+var led_state_on = false;
+var led_on_time = new Date().getTime();
 
 
 // MQTT communication controller
@@ -22,7 +22,7 @@ const command_topic = "nanok/led/command";
 const service_connected = "/connected";
 const service_state = "/state";
 
-const command_service_connected = false;
+var command_service_connected = false;
 
 //Initialization of MQTT broker service handle
 

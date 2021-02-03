@@ -1,11 +1,22 @@
 const express = require("express");
 const mqtt = require("mqtt");
 const bodyParser = require("body-parser");
+const sqlite = require("sqlite3");
 
 const app = express();
 const client = mqtt.connect("mqtt://broker.hivemq.com");
 
 const port = 8080;
+
+// initialization of database connection
+
+const db = new sqlite.Database("./database/led", (err) => {
+    if (err) {
+        console.error(err);
+    }
+
+    console.log("connected to database");
+});
 
 
 //System params
@@ -94,6 +105,16 @@ app.get("/led/state", (req, res, next) => {
 
 app.get("/led/time", (req, res, next) => {
 
+    if (req.params.start && req.params.end)
+    {
+        ans = getLEDOnTime(req.params.start, req.params.end);
+
+        webResponse(res, ans.success, ans.data, ans.message);
+    }
+});
+
+app.use((req, res, next) => {
+    webResponse(res, false, [], "404 not found");
 });
 
 app.listen(port);
@@ -131,10 +152,53 @@ function handleLEDState(message)
     {
         //save end time and stored start time
         let end_time = new Date().getTime();
+        saveLEDState(end_time);
+
     }
 }
 
 function handleCommandServiceState(message)
 {
     command_service_connected = (message.toString() === 'true');
+}
+
+function saveLEDState(end_time)
+{
+    db.run("INSERT INTO ontime (start_time, end_time) VALUES(?, ?)",
+    [led_on_time, end_time], (err) => {
+        
+        if (err) {
+            console.error(err);
+            return {
+                success: false,
+                message: err
+            }
+        }
+
+        return {
+            success: true,
+            message: "Time stored"
+        }
+    });
+}
+
+function getLEDOnTime(start_time, end_time)
+{
+    db.all("SELECT * FROM ontime WHERE start_time > ? AND end_time < ?", (err, rows) => {
+        
+        if (err) {
+            console.error(err);
+            return {
+                success: false,
+                data: [],
+                message: err
+            }
+        }
+
+        return {
+            success: true,
+            message: "Time retrieved",
+            data: rows
+        }
+    });
 }

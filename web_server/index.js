@@ -78,8 +78,12 @@ client.on("message", (topic, message) => {
 
 app.use((req, res, next) => {
 
+    console.log("\nConnection received from " + req.ip + " for " + req.originalUrl);
+
     res.setHeader("Content-Access-Allow-Origin", "*");
     res.setHeader("Content-Access-Allow-Methods", "GET, POST");
+
+    next();
 
 });
 

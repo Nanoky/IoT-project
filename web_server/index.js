@@ -4,6 +4,9 @@ const bodyParser = require("body-parser");
 const sqlite = require("sqlite3");
 const logs = require("debug")("logs");
 const error = require("debug")("error");
+const compression = require("compression");
+
+
 
 const app = express();
 const client = mqtt.connect("mqtt://broker.hivemq.com");
@@ -13,11 +16,26 @@ const port = 8080;
 
 //System params
 
-var led_state = [false, false, false, false];
+var led_state = ['false', 'false', 'false', 'false'];
 var led_on_time = [new Date().getTime(), new Date().getTime(), new Date().getTime(), new Date().getTime()];
 
 
 // Web communication controller
+
+
+
+// Setting views configurations
+
+app.set("views", "./views");
+app.set("view engine", "ejs");
+
+// Routes and request configuration
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded())
+app.use(compression());
+app.use(express.static("./public"));
+
 
 app.use((req, res, next) => {
 
@@ -30,10 +48,16 @@ app.use((req, res, next) => {
 
 });
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded())
-
 // Handle web client command
+
+app.get("/", (req, res, next) => {
+
+    res.render("home/index.ejs", {
+        states : led_state
+    });
+    res.end();
+
+});
 
 app.post("/led/state", (req, res, next) => {
     
@@ -51,13 +75,27 @@ app.get("/led/state", (req, res, next) => {
 
 });
 
-app.get("/led/time", (req, res, next) => {
+app.get("/led/time/year", (req, res, next) => {
 
-    if (req.id && req.params.start && req.params.end)
+    if (req.params.id && req.params.start && req.params.end)
     {
-        ans = getLEDOnTime(req.params.start, req.params.end);
+        let start = new Date(req.params.start, 0, 1, 0, 0, 0, 0);
+        let end = new Date(req.params.start, 11, 31, 24, 59, 59, 0);
+        getLEDOnTime(start, end).then((result) => {
+            webResponse(res, result.success, result.data, result.message);
+        });
+    }
+});
 
-        webResponse(res, ans.success, ans.data, ans.message);
+app.get("/led/time/month", (req, res, next) => {
+
+    if (req.params.id && req.params.start && req.params.end)
+    {
+        let start = new Date(req.params.start, 0, 1, 0, 0, 0, 0);
+        let end = new Date(req.params.start, 11, 31, 24, 59, 59, 0);
+        getLEDOnTime(start, end).then((result) => {
+            webResponse(res, result.success, result.data, result.message);
+        });
     }
 });
 
@@ -116,10 +154,10 @@ client.on("message", (topic, message) => {
         if (topic == command_topic + service_state)
         {
             //Get the state got
-            handleLEDState(message);
+            let id = handleLEDState(message);
 
             //Send immediatly instruction to the action unit
-            updateLEDState();
+            updateLEDState(id);
         }
     }
 });
@@ -140,10 +178,12 @@ function webResponse(res, success = true, data = [], message = "")
 
 function updateLEDState(id)
 {
-    client.publish(action_topic + service_state, JSON.stringify({
+    var data = {
         id : id,
-        state : led_state[id].toString()
-    }));
+        state : led_state[id]
+    }
+    logs(data);
+    client.publish(action_topic + service_state, JSON.stringify(data));
 }
 
 function handleLEDState(message)
@@ -155,19 +195,23 @@ function handleLEDState(message)
 
     if (last_led_state != led_state[message.id])
     {
-        led_on_time = new Date().getTime();
+        led_on_time[message.id] = new Date().getTime();
+
+        if (!(led_state[message.id] === 'true'))
+        {
+            //save end time and stored start time
+            let end_time = new Date().getTime();
+            saveLEDState(message.id, end_time).then((result) => {
+                logs(result);
+            }).catch((err) => {
+                error(err);
+            });
+        }
     }
 
-    if (!(led_state[message.id] === 'true'))
-    {
-        //save end time and stored start time
-        let end_time = new Date().getTime();
-        saveLEDState(message.id, end_time).then((result) => {
+    logs(led_state);
 
-        }).catch((err) => {
-            
-        });
-    }
+    return message.id;
 }
 
 function handleCommandServiceState(message)
@@ -198,11 +242,11 @@ async function saveLEDState(id, end_time)
     var result = {
         success: false,
         data: [],
-        message: err
+        message: ""
     };
 
     await db.run("INSERT INTO ontime (start_time, end_time, id_led) VALUES(?, ?, ?)",
-    [led_on_time[id], end_time, id], (err) => {
+    [led_on_time[id], end_time, Number(id) + 1], (err) => {
         
         if (err) {
             error(err);

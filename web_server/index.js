@@ -8,21 +8,69 @@ const client = mqtt.connect("mqtt://broker.hivemq.com");
 
 const port = 8080;
 
-// initialization of database connection
-
-const db = new sqlite.Database("./database/led", (err) => {
-    if (err) {
-        console.error(err);
-    }
-
-    console.log("connected to database");
-});
-
 
 //System params
 
-var led_state_on = false;
-var led_on_time = new Date().getTime();
+var led_state = [false, false, false, false];
+var led_on_time = [new Date().getTime(), new Date().getTime(), new Date().getTime(), new Date().getTime()];
+
+
+// Web communication controller
+
+app.use((req, res, next) => {
+
+    console.log("\nConnection received from " + req.ip + " for " + req.originalUrl);
+
+    res.setHeader("Content-Access-Allow-Origin", "*");
+    res.setHeader("Content-Access-Allow-Methods", "GET, POST");
+
+    next();
+
+});
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded())
+
+// Handle web client command
+
+app.post("/led/state", (req, res, next) => {
+    
+    console.log(req.body);
+    handleLEDState(req.body.state);
+    updateLEDState();
+
+    webResponse(res, true, led_state_on, "LED state updated");
+
+});
+
+app.get("/led/state", (req, res, next) => {
+
+    webResponse(res, true, led_state_on);
+
+});
+
+app.get("/led/time", (req, res, next) => {
+
+    if (req.params.start && req.params.end)
+    {
+        ans = getLEDOnTime(req.params.start, req.params.end);
+
+        webResponse(res, ans.success, ans.data, ans.message);
+    }
+});
+
+app.use((req, res, next) => {
+    webResponse(res, false, [], "404 not found");
+});
+
+app.listen(port);
+
+
+
+
+
+
+
 
 
 // MQTT communication controller
@@ -74,56 +122,6 @@ client.on("message", (topic, message) => {
 });
 
 
-// Web communication controller
-
-app.use((req, res, next) => {
-
-    console.log("\nConnection received from " + req.ip + " for " + req.originalUrl);
-
-    res.setHeader("Content-Access-Allow-Origin", "*");
-    res.setHeader("Content-Access-Allow-Methods", "GET, POST");
-
-    next();
-
-});
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded())
-
-// Handle web client command
-
-app.post("/led/state", (req, res, next) => {
-    
-    handleLEDState(res.body);
-    updateLEDState();
-
-    webResponse(res, true, led_state_on, "LED state updated");
-
-});
-
-app.get("/led/state", (req, res, next) => {
-
-    webResponse(res, true, led_state_on);
-
-});
-
-app.get("/led/time", (req, res, next) => {
-
-    if (req.params.start && req.params.end)
-    {
-        ans = getLEDOnTime(req.params.start, req.params.end);
-
-        webResponse(res, ans.success, ans.data, ans.message);
-    }
-});
-
-app.use((req, res, next) => {
-    webResponse(res, false, [], "404 not found");
-});
-
-app.listen(port);
-
-
 // Handler function
 
 function webResponse(res, success = true, data = [], message = "")
@@ -137,27 +135,31 @@ function webResponse(res, success = true, data = [], message = "")
     res.end();
 }
 
-function updateLEDState()
+function updateLEDState(id)
 {
-    client.publish(action_topic + service_state, led_state_on.toString());
+    client.publish(action_topic + service_state, JSON.stringify({
+        id : id,
+        state : led_state[id].toString()
+    }));
 }
 
 function handleLEDState(message)
 {
-    let last_led_state = led_state_on;
-    led_state_on = (message.toString() === 'true');
+    message = JSON.parse(message.toString());
 
-    if (last_led_state != led_state_on && led_state_on)
+    let last_led_state = led_state[message.id];
+    led_state[message.id] = message.state;
+
+    if (last_led_state != led_state[message.id])
     {
         led_on_time = new Date().getTime();
     }
 
-    if (!led_state_on)
+    if (!(led_state[message.id] === 'true'))
     {
         //save end time and stored start time
         let end_time = new Date().getTime();
-        saveLEDState(end_time);
-
+        saveLEDState(message.id, end_time);
     }
 }
 
@@ -166,10 +168,28 @@ function handleCommandServiceState(message)
     command_service_connected = (message.toString() === 'true');
 }
 
-function saveLEDState(end_time)
+
+
+
+
+
+
+
+// initialization of database connection
+
+const db = new sqlite.Database("./database/led", (err) => {
+    if (err) {
+        console.error(err);
+    }
+
+    console.log("connected to database");
+});
+
+
+function saveLEDState(id, end_time)
 {
-    db.run("INSERT INTO ontime (start_time, end_time) VALUES(?, ?)",
-    [led_on_time, end_time], (err) => {
+    db.run("INSERT INTO ontime (start_time, end_time, id_led) VALUES(?, ?, ?)",
+    [led_on_time[id], end_time, id], (err) => {
         
         if (err) {
             console.error(err);
@@ -186,9 +206,11 @@ function saveLEDState(end_time)
     });
 }
 
-function getLEDOnTime(start_time, end_time)
+function getLEDOnTime(id, start_time, end_time)
 {
-    db.all("SELECT * FROM ontime WHERE start_time > ? AND end_time < ?", (err, rows) => {
+    db.all("SELECT * FROM ontime WHERE id_led=? start_time > ? AND end_time < ?", [
+        id, start_time, end_time
+    ], (err, rows) => {
         
         if (err) {
             console.error(err);

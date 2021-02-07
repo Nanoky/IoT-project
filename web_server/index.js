@@ -2,6 +2,8 @@ const express = require("express");
 const mqtt = require("mqtt");
 const bodyParser = require("body-parser");
 const sqlite = require("sqlite3");
+const logs = require("debug")("logs");
+const error = require("debug")("error");
 
 const app = express();
 const client = mqtt.connect("mqtt://broker.hivemq.com");
@@ -19,7 +21,7 @@ var led_on_time = [new Date().getTime(), new Date().getTime(), new Date().getTim
 
 app.use((req, res, next) => {
 
-    console.log("\nConnection received from " + req.ip + " for " + req.originalUrl);
+    logs("\nConnection received from " + req.ip + " for " + req.originalUrl);
 
     res.setHeader("Content-Access-Allow-Origin", "*");
     res.setHeader("Content-Access-Allow-Methods", "GET, POST");
@@ -35,7 +37,7 @@ app.use(bodyParser.urlencoded())
 
 app.post("/led/state", (req, res, next) => {
     
-    console.log(req.body);
+    logs(req.body);
     handleLEDState(req.body.state);
     updateLEDState();
 
@@ -51,7 +53,7 @@ app.get("/led/state", (req, res, next) => {
 
 app.get("/led/time", (req, res, next) => {
 
-    if (req.params.start && req.params.end)
+    if (req.id && req.params.start && req.params.end)
     {
         ans = getLEDOnTime(req.params.start, req.params.end);
 
@@ -87,7 +89,8 @@ var command_service_connected = false;
 
 client.on('connect', () => {
 
-    console.log("MQTT client connected");
+    //console.log("MQTT client connected");
+    logs("MQTT client connected");
 
     client.publish(action_topic + service_connected, 'true');
 
@@ -100,8 +103,8 @@ client.on('connect', () => {
 
 client.on("message", (topic, message) => {
 
-    console.log("\t- Received a message from : " + topic);
-    console.log("\t\tMessage = " + message);
+    logs("\t- Received a message from : " + topic);
+    logs("\t\tMessage = " + message);
 
     if (topic == command_topic + service_connected)
     {
@@ -159,7 +162,11 @@ function handleLEDState(message)
     {
         //save end time and stored start time
         let end_time = new Date().getTime();
-        saveLEDState(message.id, end_time);
+        saveLEDState(message.id, end_time).then((result) => {
+
+        }).catch((err) => {
+            
+        });
     }
 }
 
@@ -179,52 +186,59 @@ function handleCommandServiceState(message)
 
 const db = new sqlite.Database("./database/led", (err) => {
     if (err) {
-        console.error(err);
+        error(err);
     }
 
-    console.log("connected to database");
+    logs("connected to database");
 });
 
 
-function saveLEDState(id, end_time)
+async function saveLEDState(id, end_time)
 {
-    db.run("INSERT INTO ontime (start_time, end_time, id_led) VALUES(?, ?, ?)",
+    var result = {
+        success: false,
+        data: [],
+        message: err
+    };
+
+    await db.run("INSERT INTO ontime (start_time, end_time, id_led) VALUES(?, ?, ?)",
     [led_on_time[id], end_time, id], (err) => {
         
         if (err) {
-            console.error(err);
-            return {
-                success: false,
-                message: err
-            }
+            error(err);
+            result.success = false;
+            result.message = err;
         }
 
-        return {
-            success: true,
-            message: "Time stored"
-        }
+        result.success = true;
+        result.message = "Time stored";
     });
+
+    return result;
 }
 
-function getLEDOnTime(id, start_time, end_time)
+async function getLEDOnTime(id, start_time, end_time)
 {
-    db.all("SELECT * FROM ontime WHERE id_led=? start_time > ? AND end_time < ?", [
+    var result = {
+        success: false,
+        data: [],
+        message: err
+    };
+
+    await db.all("SELECT * FROM ontime WHERE id_led=? start_time > ? AND end_time < ?", [
         id, start_time, end_time
     ], (err, rows) => {
         
         if (err) {
-            console.error(err);
-            return {
-                success: false,
-                data: [],
-                message: err
-            }
+            error(err);
+            result.success = false;
+            result.message = err;
         }
 
-        return {
-            success: true,
-            message: "Time retrieved",
-            data: rows
-        }
+        result.success = true;
+        result.message = "";
+        result.data = rows;
     });
+
+    return result;
 }

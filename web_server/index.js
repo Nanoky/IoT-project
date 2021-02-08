@@ -17,7 +17,7 @@ const port = 8080;
 //System params
 
 var led_state = ['false', 'false', 'false', 'false'];
-var led_on_time = [new Date().getTime(), new Date().getTime(), new Date().getTime(), new Date().getTime()];
+var led_on_time = [0, 0, 0, 0];
 
 
 // Web communication controller
@@ -29,20 +29,17 @@ var led_on_time = [new Date().getTime(), new Date().getTime(), new Date().getTim
 app.set("views", "./views");
 app.set("view engine", "ejs");
 
-// Routes and request configuration
+// Routes and request configuration 
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded())
 app.use(compression());
-app.use(express.static("./public"));
 
 
 app.use((req, res, next) => {
 
-    logs("\nConnection received from " + req.ip + " for " + req.originalUrl);
-
-    res.setHeader("Content-Access-Allow-Origin", "*");
-    res.setHeader("Content-Access-Allow-Methods", "GET, POST");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST");
 
     next();
 
@@ -59,41 +56,103 @@ app.get("/", (req, res, next) => {
 
 });
 
+app.use(express.static("public"));
+
 app.post("/led/state", (req, res, next) => {
     
     logs(req.body);
-    handleLEDState(req.body.state);
-    updateLEDState();
+    handleLEDState('{"id":"' + req.body.id + '","state":"' + req.body.state + '"}');
+    updateLEDState(req.body.id);
 
-    webResponse(res, true, led_state_on, "LED state updated");
+    webResponse(res, true, led_state[req.body.id], "LED state updated");
 
 });
 
 app.get("/led/state", (req, res, next) => {
 
-    webResponse(res, true, led_state_on);
+    webResponse(res, true, led_state);
 
 });
 
-app.get("/led/time/year", (req, res, next) => {
+app.get("/led/time/hour", (req, res, next) => {
 
-    if (req.params.id && req.params.start && req.params.end)
+    if (req.query.id && req.query.start)
     {
-        let start = new Date(req.params.start, 0, 1, 0, 0, 0, 0);
-        let end = new Date(req.params.start, 11, 31, 24, 59, 59, 0);
-        getLEDOnTime(start, end).then((result) => {
-            webResponse(res, result.success, result.data, result.message);
-        });
+        let year = new Date().getFullYear();
+        let month = new Date().getMonth();
+        let day = new Date().getDate();
+        let start = new Date(year, month, day, req.query.start, 0, 0, 0).getTime();
+        let end = new Date(year, month, day, req.query.start, 59, 59, 0).getTime();
+        getLEDOnDate(res, req.query.id, start, end);
     }
 });
 
 app.get("/led/time/month", (req, res, next) => {
 
-    if (req.params.id && req.params.start && req.params.end)
+    if (req.query.id && req.query.start)
     {
-        let start = new Date(req.params.start, 0, 1, 0, 0, 0, 0);
-        let end = new Date(req.params.start, 11, 31, 24, 59, 59, 0);
-        getLEDOnTime(start, end).then((result) => {
+        let year = new Date().getFullYear();
+        let start = new Date(year, req.query.start, 1, 0, 0, 0, 0).getTime();
+        let end = new Date(year, req.query.start, 23, 59, 59, 0).getTime();
+        getLEDOnDate(res, req.query.id, start, end);
+    }
+});
+
+app.get("/led/time/week", (req, res, next) => {
+
+    if (req.query.id && req.query.start)
+    {
+        let year = new Date().getFullYear();
+        let month = new Date().getMonth();
+        let start = new Date(year, month, req.query.start, 0, 0, 0, 0).getTime();
+        let end = new Date(year, month, req.query.start + 6, 23, 59, 59, 0).getTime();
+        getLEDOnDate(res, req.query.id, start, end);
+    }
+});
+
+app.get("/led/time/day", (req, res, next) => {
+
+    if (req.query.id && req.query.start)
+    {
+        let year = new Date().getFullYear();
+        let month = new Date().getMonth();
+        let start = new Date(year, month, req.query.start, 0, 0, 0, 0).getTime();
+        let end = new Date(year, month, req.query.start, 23, 59, 59, 0).getTime();
+        getLEDOnDate(res, req.query.id, start, end);
+    }
+});
+
+app.get("/led/time", (req, res, next) => {
+
+    if (req.query.id)
+    {
+
+        var result = {
+            success: false,
+            data: [],
+            message: ""
+        };
+
+        var last_state = led_on_time[req.query.id];
+    
+        db.all("SELECT SUM(end_time - start_time) as time FROM ontime WHERE id_led=?", [
+            Number(req.query.id) + 1
+        ], (err, rows) => {
+            
+            if (err) {
+                error(err);
+                result.success = false;
+                result.message = err;
+            }
+    
+            result.success = true;
+            result.message = "";
+            result.data = rows[0];
+
+            if (led_state === 'on' || led_state === 'true'){
+                result.data.time = result.data.time + (new Date().getTime() - last_state);
+            }
+
             webResponse(res, result.success, result.data, result.message);
         });
     }
@@ -115,8 +174,8 @@ app.listen(port);
 
 // MQTT communication controller
 
-const action_topic = "nanok/led/action";
-const command_topic = "nanok/led/command";
+const action_topic = "stic/raspberry/domo/wemos";
+const command_topic = "stic/raspberry/domo/esp32";
 
 const service_connected = "/connected";
 const service_state = "/state";
@@ -178,12 +237,10 @@ function webResponse(res, success = true, data = [], message = "")
 
 function updateLEDState(id)
 {
-    var data = {
-        id : id,
-        state : led_state[id]
-    }
+    let state = (led_state[id] === 'true' || led_state[id] === 'on') ? 1 : 0;
+    var data = String(Number(id)) + state;
     logs(data);
-    client.publish(action_topic + service_state, JSON.stringify(data));
+    client.publish(action_topic + service_state, data);
 }
 
 function handleLEDState(message)
@@ -195,9 +252,12 @@ function handleLEDState(message)
 
     if (last_led_state != led_state[message.id])
     {
-        led_on_time[message.id] = new Date().getTime();
+        if (led_state[message.id] === 'true' || led_state[message.id] === 'on')
+        {
+            led_on_time[message.id] = new Date().getTime();
+        }
 
-        if (!(led_state[message.id] === 'true'))
+        if (!(led_state[message.id] === 'true' || led_state[message.id] === 'on'))
         {
             //save end time and stored start time
             let end_time = new Date().getTime();
@@ -256,20 +316,23 @@ async function saveLEDState(id, end_time)
 
         result.success = true;
         result.message = "Time stored";
+
+        led_on_time[id] = 0;
+
+        return result;
     });
 
-    return result;
 }
 
-async function getLEDOnTime(id, start_time, end_time)
+function getLEDOnDate(res, id, start_time, end_time)
 {
     var result = {
         success: false,
         data: [],
-        message: err
+        message: ""
     };
 
-    await db.all("SELECT * FROM ontime WHERE id_led=? start_time > ? AND end_time < ?", [
+    db.all("SELECT COUNT(id) as time FROM ontime WHERE id_led=? AND start_time > ? AND end_time < ?", [
         id, start_time, end_time
     ], (err, rows) => {
         
@@ -281,8 +344,13 @@ async function getLEDOnTime(id, start_time, end_time)
 
         result.success = true;
         result.message = "";
-        result.data = rows;
+        result.data = rows[0];
+
+        if (led_on_time[id] != 0 && led_on_time[id] != "0"){
+            result.data.time = result.data.time + 1;
+        }
+
+        webResponse(res, result.success, result.data, result.message);
     });
 
-    return result;
 }

@@ -23,14 +23,19 @@
                 <div class="container-fluid">
                     <!-- Info boxes -->
                     <div class="row">
-                        <div class="col-12 col-sm-6 col-md-3">
+                        <div class="col-12 col-sm-6 col-md-3" id="blue_box">
                             <div class="info-box">
-                                <span class="info-box-icon bg-info elevation-1"><i class="fas fa-cog"></i></span>
+                                <span class="info-box-icon bg-info elevation-1" id="blue_icon"><i class="far fa-lightbulb"></i></span>
 
                                 <div class="info-box-content">
                                     <span class="info-box-text">Blue LED</span>
-                                    <span class="info-box-number">
-                                    <%=states[0]%>
+                                    <span class="info-box-number" id="blue_state">
+                                        <% if(states[0] == 'true'){ %>
+                                            ON
+                                        <% } %>
+                                        <% if(states[0] == 'false'){ %>
+                                            OFF
+                                        <% } %>
                                     </span>
                                 </div>
                             <!-- /.info-box-content -->
@@ -38,13 +43,20 @@
                             <!-- /.info-box -->
                         </div>
                         <!-- /.col -->
-                        <div class="col-12 col-sm-6 col-md-3">
+                        <div class="col-12 col-sm-6 col-md-3" id="red_box">
                             <div class="info-box mb-3">
-                            <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-thumbs-up"></i></span>
+                            <span class="info-box-icon bg-danger elevation-1" id="red_icon"><i class="far fa-lightbulb"></i></span>
 
                             <div class="info-box-content">
                                 <span class="info-box-text">Red Led</span>
-                                <span class="info-box-number"><%=states[0]%></span>
+                                <span class="info-box-number" id="red_state">
+                                    <% if(states[0] == 'true'){ %>
+                                        ON
+                                    <% } %>
+                                    <% if(states[0] == 'false'){ %>
+                                        OFF
+                                    <% } %>
+                                </span>
                             </div>
                             <!-- /.info-box-content -->
                             </div>
@@ -55,26 +67,40 @@
                         <!-- fix for small devices only -->
                         <div class="clearfix hidden-md-up"></div>
 
-                        <div class="col-12 col-sm-6 col-md-3">
+                        <div class="col-12 col-sm-6 col-md-3" id="green_box">
                             <div class="info-box mb-3">
-                            <span class="info-box-icon bg-success elevation-1"><i class="fas fa-shopping-cart"></i></span>
+                            <span class="info-box-icon bg-success elevation-1" id="green_icon"><i class="far fa-lightbulb"></i></span>
 
                             <div class="info-box-content">
                                 <span class="info-box-text">Green LED</span>
-                                <span class="info-box-number"><%=states[0]%></span>
+                                <span class="info-box-number" id="green_state">
+                                    <% if(states[0] == 'true'){ %>
+                                        ON
+                                    <% } %>
+                                    <% if(states[0] == 'false'){ %>
+                                        OFF
+                                    <% } %>
+                                </span>
                             </div>
                             <!-- /.info-box-content -->
                             </div>
                             <!-- /.info-box -->
                         </div>
                         <!-- /.col -->
-                        <div class="col-12 col-sm-6 col-md-3">
+                        <div class="col-12 col-sm-6 col-md-3" id="yellow_box">
                             <div class="info-box mb-3">
-                            <span class="info-box-icon bg-warning elevation-1"><i class="fas fa-users"></i></span>
+                            <span class="info-box-icon bg-warning elevation-1" id="yellow_icon"><i class="far fa-lightbulb"></i></span>
 
                             <div class="info-box-content">
                                 <span class="info-box-text">Yellow LED</span>
-                                <span class="info-box-number"><%=states[0]%></span>
+                                <span class="info-box-number" id="yellow_state">
+                                    <% if(states[0] == 'true'){ %>
+                                        ON
+                                    <% } %>
+                                    <% if(states[0] == 'false'){ %>
+                                        OFF
+                                    <% } %>
+                                </span>
                             </div>
                             <!-- /.info-box-content -->
                             </div>
@@ -99,11 +125,11 @@
                                 <i class="fas fa-wrench"></i>
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-right" role="menu">
-                                <a href="#" class="dropdown-item">Daily</a>
-                                <a href="#" class="dropdown-item">Weekly</a>
-                                <a href="#" class="dropdown-item">Monthly</a>
+                                <a href="javascript:void" id="daily-stat_button" class="dropdown-item">Daily</a>
+                                <a href="javascript:void" id="weekly-stat_button" class="dropdown-item">Weekly</a>
+                                <a href="javascript:void" id="monthly-stat_button" class="dropdown-item">Monthly</a>
                                 <a class="dropdown-divider"></a>
-                                <a href="#" class="dropdown-item">Yearly</a>
+                                <a href="javascript:void" id="annualy-stat_button" class="dropdown-item">Yearly</a>
                                 </div>
                             </div>
                             <button type="button" class="btn btn-tool" data-card-widget="remove">
@@ -116,12 +142,12 @@
                             <div class="row">
                             <div class="col-md-8">
                                 <p class="text-center">
-                                <strong>Light up: <span> 24 Jan, 2014</span> - <span>30 Jul, 2014</span></strong>
+                                <strong>Light up: <span id="stat_frequency">Today</span></strong>
                                 </p>
 
                                 <div class="chart">
                                 <!-- Sales Chart Canvas -->
-                                <canvas id="salesChart" height="180" style="height: 180px;"></canvas>
+                                <canvas id="timeGraph" height="180" style="height: 180px;"></canvas>
                                 </div>
                                 <!-- /.chart-responsive -->
                             </div>
@@ -133,82 +159,41 @@
 
                                 <div class="progress-group">
                                 LED blue
-                                <span class="float-right"><b>160</b>/200</span>
+                                <span class="float-right"><b id="blue_time">0</b>/<span class="time_total">0</span></span>
                                 <div class="progress progress-sm">
-                                    <div class="progress-bar bg-primary" style="width: 80%"></div>
+                                    <div class="progress-bar bg-primary" id="blue_progress" style="width: 100%"></div>
                                 </div>
                                 </div>
                                 <!-- /.progress-group -->
 
                                 <div class="progress-group">
                                 LED red
-                                <span class="float-right"><b>310</b>/400</span>
+                                <span class="float-right"><b id="red_time">0</b>/<span class="time_total">0</span></span>
                                 <div class="progress progress-sm">
-                                    <div class="progress-bar bg-danger" style="width: 75%"></div>
+                                    <div class="progress-bar bg-danger" id="red_progress" style="width: 100%"></div>
                                 </div>
                                 </div>
 
                                 <!-- /.progress-group -->
                                 <div class="progress-group">
                                 <span class="progress-text">LED green</span>
-                                <span class="float-right"><b>480</b>/800</span>
+                                <span class="float-right"><b id="green_time">0</b>/<span class="time_total">0</span></span>
                                 <div class="progress progress-sm">
-                                    <div class="progress-bar bg-success" style="width: 60%"></div>
+                                    <div class="progress-bar bg-success" id="green_progress" style="width: 100%"></div>
                                 </div>
                                 </div>
 
                                 <!-- /.progress-group -->
                                 <div class="progress-group">
                                 LED yellow
-                                <span class="float-right"><b>250</b>/500</span>
+                                <span class="float-right"><b id="yellow_time">0</b>/<span class="time_total">0</span></span>
                                 <div class="progress progress-sm">
-                                    <div class="progress-bar bg-warning" style="width: 50%"></div>
+                                    <div class="progress-bar bg-warning" id="yellow_progress" style="width: 100%"></div>
                                 </div>
                                 </div>
                                 <!-- /.progress-group -->
                             </div>
                             <!-- /.col -->
-                            </div>
-                            <!-- /.row -->
-                        </div>
-                        <!-- ./card-body -->
-                        <div class="card-footer">
-                            <div class="row">
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block border-right">
-                                <span class="description-percentage text-success"><i class="fas fa-caret-up"></i> 17%</span>
-                                <h5 class="description-header">$35,210.43</h5>
-                                <span class="description-text">LED blue</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block border-right">
-                                <span class="description-percentage text-warning"><i class="fas fa-caret-left"></i> 0%</span>
-                                <h5 class="description-header">$10,390.90</h5>
-                                <span class="description-text">LED red</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block border-right">
-                                <span class="description-percentage text-success"><i class="fas fa-caret-up"></i> 20%</span>
-                                <h5 class="description-header">$24,813.53</h5>
-                                <span class="description-text">LED green</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block">
-                                <span class="description-percentage text-danger"><i class="fas fa-caret-down"></i> 18%</span>
-                                <h5 class="description-header">1200</h5>
-                                <span class="description-text">LED white</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
                             </div>
                             <!-- /.row -->
                         </div>

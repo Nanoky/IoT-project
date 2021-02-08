@@ -1,4 +1,4 @@
-const serverurl = "http://localhost:8080";
+//const serverurl = "http://localhost:8080";
 
 var led_time = {
     year: [0, 0, 0, 0],
@@ -141,7 +141,7 @@ $(document).ready(function(){
 
 function setState(id, state)
 {
-    $.post(serverurl + "/led/state", {
+    $.post("/led/state", {
         id: id,
         state: state
     }, (data) => {
@@ -274,7 +274,7 @@ function getDate()
     for (let index = 0; index < 4; index++) {
 
         for (let j= 0; j < graph_data.day[index].length - 1; j++) {
-            $.get(serverurl + "/led/time/hour?id=" + (index + 1) + "&start=" + j, (data, status) => {
+            $.get("/led/time/hour?id=" + (index + 1) + "&start=" + j, (data, status) => {
 
                 if (data.success)
                 {
@@ -285,7 +285,7 @@ function getDate()
         }
 
         for (let j= 0; j < graph_data.week[index].length - 1; j++) {
-            $.get(serverurl + "/led/time/day?id=" + (index + 1) + "&start=" + ((j * 7) + 1), (data, status) => {
+            $.get("/led/time/day?id=" + (index + 1) + "&start=" + ((j * 7) + 1), (data, status) => {
 
                 if (data.success)
                 {
@@ -296,7 +296,7 @@ function getDate()
         }
 
         for (let j= 0; j < graph_data.month[index].length - 1; j++) {
-            $.get(serverurl + "/led/time/week?id=" + (index + 1) + "&start=" + j, (data, status) => {
+            $.get("/led/time/week?id=" + (index + 1) + "&start=" + j, (data, status) => {
 
                 if (data.success)
                 {
@@ -307,7 +307,7 @@ function getDate()
         }
 
         for (let j= 0; j < graph_data.year[index].length - 1; j++) {
-            $.get(serverurl + "/led/time/month?id=" + (index + 1) + "&start=" + j, (data, status) => {
+            $.get("/led/time/month?id=" + (index + 1) + "&start=" + j, (data, status) => {
 
                 if (data.success)
                 {
@@ -326,7 +326,7 @@ function getTime()
 {
 
     for (let index = 0; index < 4; index++) {
-        $.get(serverurl + "/led/time?id=" + (index), (data, status) => {
+        $.get("/led/time?id=" + (index), (data, status) => {
 
             if (data.success)
             {
@@ -345,7 +345,7 @@ function getTime()
 function getStates()
 {
     for (let index = 0; index < 4; index++) {
-        $.get(serverurl + "/led/state?id=" + (index + 1), (data, status) => {
+        $.get("/led/state?id=" + (index + 1), (data, status) => {
 
             if (data.success)
             {

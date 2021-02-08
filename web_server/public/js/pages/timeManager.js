@@ -160,14 +160,53 @@ function getUpdate()
 
 function updateDOM(max)
 {
-    $("#blue_time").html(led_time.day[blue]);
-    $("#blue_progress").attr("style", "width: " + (led_time.day[blue] / max) * 100 + "%");
-    $("#red_time").html(led_time.day[red]);
-    $("#red_progress").attr("style", "width: " + (led_time.day[red] / max) * 100 + "%");
-    $("#green_time").html(led_time.day[green]);
-    $("#green_progress").attr("style", "width: " + (led_time.day[green] / max) * 100 + "%");
-    $("#yellow_time").html(led_time.day[yellow]);
-    $("#yellow_progress").attr("style", "width: " + (led_time.day[yellow] / max) * 100 + "%");
+    if (current_stat == daily)
+    {
+        $("#blue_time").html(led_time.day[blue]);
+        $("#blue_progress").attr("style", "width: " + (led_time.day[blue] / max) * 100 + "%");
+        $("#red_time").html(led_time.day[red]);
+        $("#red_progress").attr("style", "width: " + (led_time.day[red] / max) * 100 + "%");
+        $("#green_time").html(led_time.day[green]);
+        $("#green_progress").attr("style", "width: " + (led_time.day[green] / max) * 100 + "%");
+        $("#yellow_time").html(led_time.day[yellow]);
+        $("#yellow_progress").attr("style", "width: " + (led_time.day[yellow] / max) * 100 + "%");
+    }
+
+    if (current_stat == weekly)
+    {
+        $("#blue_time").html(led_time.week[blue]);
+        $("#blue_progress").attr("style", "width: " + (led_time.week[blue] / max) * 100 + "%");
+        $("#red_time").html(led_time.week[red]);
+        $("#red_progress").attr("style", "width: " + (led_time.week[red] / max) * 100 + "%");
+        $("#green_time").html(led_time.week[green]);
+        $("#green_progress").attr("style", "width: " + (led_time.week[green] / max) * 100 + "%");
+        $("#yellow_time").html(led_time.week[yellow]);
+        $("#yellow_progress").attr("style", "width: " + (led_time.week[yellow] / max) * 100 + "%");
+    }
+
+    if (current_stat == monthly)
+    {
+        $("#blue_time").html(led_time.month[blue]);
+        $("#blue_progress").attr("style", "width: " + (led_time.month[blue] / max) * 100 + "%");
+        $("#red_time").html(led_time.month[red]);
+        $("#red_progress").attr("style", "width: " + (led_time.month[red] / max) * 100 + "%");
+        $("#green_time").html(led_time.month[green]);
+        $("#green_progress").attr("style", "width: " + (led_time.month[green] / max) * 100 + "%");
+        $("#yellow_time").html(led_time.month[yellow]);
+        $("#yellow_progress").attr("style", "width: " + (led_time.month[yellow] / max) * 100 + "%");
+    }
+
+    if (current_stat == annualy)
+    {
+        $("#blue_time").html(led_time.year[blue]);
+        $("#blue_progress").attr("style", "width: " + (led_time.year[blue] / max) * 100 + "%");
+        $("#red_time").html(led_time.year[red]);
+        $("#red_progress").attr("style", "width: " + (led_time.year[red] / max) * 100 + "%");
+        $("#green_time").html(led_time.year[green]);
+        $("#green_progress").attr("style", "width: " + (led_time.year[green] / max) * 100 + "%");
+        $("#yellow_time").html(led_time.year[yellow]);
+        $("#yellow_progress").attr("style", "width: " + (led_time.year[yellow] / max) * 100 + "%");
+    }
 
     $(".time_total").html(max);
 
@@ -234,7 +273,7 @@ function getDate()
 {
     for (let index = 0; index < 4; index++) {
 
-        for (let j= 0; j < graph_data.day.length - 1; j++) {
+        for (let j= 0; j < graph_data.day[index].length - 1; j++) {
             $.get(serverurl + "/led/time/hour?id=" + (index + 1) + "&start=" + j, (data, status) => {
 
                 if (data.success)
@@ -245,7 +284,7 @@ function getDate()
             });
         }
 
-        for (let j= 0; j < graph_data.week.length - 1; j++) {
+        for (let j= 0; j < graph_data.week[index].length - 1; j++) {
             $.get(serverurl + "/led/time/day?id=" + (index + 1) + "&start=" + ((j * 7) + 1), (data, status) => {
 
                 if (data.success)
@@ -256,7 +295,7 @@ function getDate()
             });
         }
 
-        for (let j= 0; j < graph_data.month.length - 1; j++) {
+        for (let j= 0; j < graph_data.month[index].length - 1; j++) {
             $.get(serverurl + "/led/time/week?id=" + (index + 1) + "&start=" + j, (data, status) => {
 
                 if (data.success)
@@ -267,7 +306,7 @@ function getDate()
             });
         }
 
-        for (let j= 0; j < graph_data.year.length - 1; j++) {
+        for (let j= 0; j < graph_data.year[index].length - 1; j++) {
             $.get(serverurl + "/led/time/month?id=" + (index + 1) + "&start=" + j, (data, status) => {
 
                 if (data.success)
@@ -287,14 +326,14 @@ function getTime()
 {
 
     for (let index = 0; index < 4; index++) {
-        $.get(serverurl + "/led/time?id=" + (index + 1), (data, status) => {
+        $.get(serverurl + "/led/time?id=" + (index), (data, status) => {
 
             if (data.success)
             {
                 led_time.day[index] = data.data.time / (60 * 60 * 24 * 1000);
                 led_time.week[index] = led_time.day[index] / 7;
-                led_time.week[index] = led_time.day[index] / 30;
-                led_time.week[index] = led_time.day[index] / 365;
+                led_time.month[index] = led_time.day[index] / 30;
+                led_time.year[index] = led_time.day[index] / 365;
             }
             
         });
@@ -310,7 +349,6 @@ function getStates()
 
             if (data.success)
             {
-                current_state[index]
                 if (data.data[index] === 'true' || data.data[index] === 'on')
                 {
                     current_state[index] = "ON"

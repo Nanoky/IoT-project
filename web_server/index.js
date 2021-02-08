@@ -149,7 +149,7 @@ app.get("/led/time", (req, res, next) => {
             result.message = "";
             result.data = rows[0];
 
-            if (led_state === 'on' || led_state === 'true'){
+            if (led_state[req.query.id] === 'on' || led_state[req.query.id] === 'true'){
                 result.data.time = result.data.time + (new Date().getTime() - last_state);
             }
 
